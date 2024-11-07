@@ -1,25 +1,29 @@
 timeout: 1800s
 steps:
-  # Step 1: Install Terraform
-  - name: hashicorp/terraform:latest
-    entrypoint: /bin/sh
+  # Step to retrieve the PAT from Secret Manager
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
     args:
       - '-c'
-      - |-
-        terraform --version
+      - |
+        export GITHUB_TOKEN=$(gcloud secrets versions access latest --secret=epam-demo-terrafom4d49-github_token_id)
+        echo $GITHUB_TOKEN > /workspace/github_token.txt  # Save the token for later use
 
-  # Step 2: Initialize Terraform
-  - name: hashicorp/terraform:latest
+  # Terraform init and plan
+  - name: 'hashicorp/terraform:latest'
     entrypoint: /bin/sh
+    env:
+      - 'GITHUB_TOKEN=${GITHUB_TOKEN}'  # Pass the PAT to the environment
     args:
       - '-c'
       - |-
         terraform init -input=false
+        terraform plan -input=false -lock-timeout=60s -out=tfplan
 
-  # Step 3: Create Terraform Plan
-  - name: hashicorp/terraform:latest
-    entrypoint: /bin/sh
-    args:
-      - '-c'
-      - |-
-        terraform plan -input=false -out=tfplan
+options:
+  machineType: 'E2_HIGHCPU_8'
+
+artifacts:
+  objects:
+    location: 'gs://${_ARTIFACT_BUCKET_NAME}/terraform/cloudbuild/plan/${BUILD_ID}'
+    paths: ['tfplan']
