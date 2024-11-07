@@ -1,0 +1,13 @@
+timeout: 1800s
+steps:
+  # Terraform init and apply
+  - name: hashicorp/terraform:latest  # Public image with Terraform
+    entrypoint: /bin/sh
+    args:
+      - '-c'
+      - |-
+        terraform init -input=false
+        terraform apply -input=false -auto-approve tfplan
+
+options:
+  machineType: 'E2_HIGHCPU_8'
